@@ -1,0 +1,17 @@
+frist script to launching the instance.
+
+provider "aws" {
+    access_key = "AKIAUYZARNLJB6KHJ3MT"
+    secret_key = "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"
+    region  = "us-east-2"
+}
+
+resource "aws_instance" "instance01" {
+    ami ="ami-0998bf58313ab53da"
+    instance_type  ="t2.micro"
+    tags = {
+        name = "node 01"
+    }
+  
+}
+
