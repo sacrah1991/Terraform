@@ -1,0 +1,22 @@
+resource "aws_vpc" "main" {
+  cidr_block       = "10.0.0.0/16"
+  instance_tenancy = "dedicated"
+
+  tags = {
+    Name = "main"
+  }
+}
+
+resource "aws_subnet" "main_sub" {
+    vpc_id     = "${aws_vpc.main.id}"
+    cidr_block ="10.0.1.0/24"
+    tags = {
+    Name = "private_sub"
+}
+
+resource "aws_internet_gateway" "gateway" {
+  vpc_id = "${aws_vpc.main.id}"
+  tags = {
+    Name = "main_igw"
+  }
+}
