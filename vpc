@@ -1,22 +1,149 @@
-resource "aws_vpc" "main" {
-  cidr_block       = "10.0.0.0/16"
-  instance_tenancy = "dedicated"
-
+resource "aws_vpc" "my_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  instance_tenancy     = "default"
   tags = {
-    Name = "main"
+    Name = "my-vpc"
   }
 }
+#subnet public
+resource "aws_subnet" "my_vpc-public-1" {
+  vpc_id                  = aws_vpc.my_vpc.id
+  cidr_block              = var.public-subnet-1_cidr
+  map_public_ip_on_launch = "true"
+  availability_zone       = var.availability_zone_names[0]
 
-resource "aws_subnet" "main_sub" {
-    vpc_id     = "${aws_vpc.main.id}"
-    cidr_block ="10.0.1.0/24"
-    tags = {
-    Name = "private_sub"
+  tags = {
+    Name = "public_subnet-1"
+  }
+}
+resource "aws_subnet" "my_vpc-public-2" {
+  vpc_id                  = aws_vpc.my_vpc.id
+  cidr_block              = var.public-subnet-2_cidr
+  map_public_ip_on_launch = "true"
+  availability_zone       = var.availability_zone_names[1]
+
+  tags = {
+    Name = "public_subnet-2"
+  }
+}
+#subnet private
+resource "aws_subnet" "my_vpc-private-1" {
+  vpc_id                  = aws_vpc.my_vpc.id
+  cidr_block              = var.private-subnet-1_cidr
+  map_public_ip_on_launch = "false"
+  availability_zone       = var.availability_zone_names[0]
+
+  tags = {
+    Name = "private_subnet-1"
+  }
+}
+resource "aws_subnet" "my_vpc-private-2" {
+  vpc_id                  = aws_vpc.my_vpc.id
+  cidr_block              = var.private-subnet-2_cidr
+  map_public_ip_on_launch = "false"
+  availability_zone       = var.availability_zone_names[1]
+
+  tags = {
+    Name = "private_subnet-2"
+  }
+}
+#internet gateway
+resource "aws_internet_gateway" "my_igw" {
+  vpc_id = aws_vpc.my_vpc.id
+
+  tags = {
+    Name = "internet_gateway"
+  }
+}
+#route table
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.my_vpc.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.my_igw.id
+  }
+  tags = {
+    Name = "Route-1"
+  }
+}
+resource "aws_route_table_association" "public-1" {
+  subnet_id      = aws_subnet.my_vpc-public-1.id
+  route_table_id = aws_route_table.public.id
+}
+resource "aws_route_table_association" "public-2" {
+  subnet_id      = aws_subnet.my_vpc-public-2.id
+  route_table_id = aws_route_table.public.id
+}
+# Creating Nat Gateway
+resource "aws_eip" "nat" {
+  vpc = true
+}
+resource "aws_nat_gateway" "nat-gw" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.my_vpc-public-1.id
+  depends_on    = [aws_internet_gateway.my_igw]
+}
+# Add routes for VPC
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.my_vpc.id
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat-gw.id
+  }
+
+  tags = {
+    Name = "private-1"
+  }
+}
+# Creating route associations for private Subnets
+resource "aws_route_table_association" "private1" {
+  subnet_id      = aws_subnet.my_vpc-private-1.id
+  route_table_id = aws_route_table.private.id
 }
 
-resource "aws_internet_gateway" "gateway" {
-  vpc_id = "${aws_vpc.main.id}"
-  tags = {
-    Name = "main_igw"
-  }
+resource "aws_route_table_association" "private2" {
+  subnet_id      = aws_subnet.my_vpc-private-2.id
+  route_table_id = aws_route_table.private.id
+}
+
+
+-----------------------------------------------------------------------------------
+variable.tf
+-----------------------------------------------------------------------------------
+variable "vpc-cidr_block" {
+    default =  "10.0.0.0/16"
+    description = "the CIDR block"
+    type = string
+}
+variable "public-subnet-1_cidr" {
+    default =  "10.0.1.0/24"
+    description = "the public subnet CIDR block"
+    type = string
+}
+variable "public-subnet-2_cidr" {
+    default =  "10.0.2.0/24"
+    description = "the public subnet CIDR block"
+    type = string
+}
+variable "private-subnet-1_cidr" {
+    default =  "10.0.3.0/24"
+    description = "the public subnet CIDR block"
+    type = string
+}
+variable "private-subnet-2_cidr" {
+    default =  "10.0.4.0/24"
+    description = "the public subnet CIDR block"
+    type = string
+}
+variable "access_key" {
+  default = "AKIAZQB2BKH5X2VNT5HF"
+  type = string
+}
+variable "secret_key" {
+  default = "MqyOagqYs+aATEp2qdqTUa2a1Qc7GMbRTTsTCyVi"
+  type = string
+}
+variable "region" {
+  default = "us-west-2"
+  type = string
 }
