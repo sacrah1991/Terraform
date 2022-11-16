@@ -1,0 +1,49 @@
+provider "datadog" {
+    api_key = "e83c594d6fa80c0f49c4ad34ba7a078b"
+    app_key = "952783c50c21078abc57893ef4be3a7121d763f1"
+}
+resource "datadog_monitor" "disk_usage" {
+  name           = "Disk usage high"
+  query          = "avg(last_5m):${var.disk_usage["query"]}{*} by ${var.trigger_by} * 100 > ${var.disk_usage["threshold"]}"
+  type           = "metric alert"
+  notify_no_data = true
+  include_tags   = true
+}
+
+ 
+resource "datadog_monitor" "cpumonitor" {
+  name = "cpu monitor"
+  type = "metric alert"
+  message = "CPU usage alert"
+  query = "avg(last_1m):avg:system.cpu.system{*} by {host} > 60"
+  thresholds = {
+    ok = 20
+    warning = 50
+    critical = 60
+  }
+}
+resource "datadog_monitor" "free_disk" {
+    name = "free_disk"
+    type = "metric alert"
+    message = "free disk alert"
+    query = "avg(last_5m):min:system.disk.free{*} by {host} > 40"
+    thershold = {
+        ok = 20
+        warning = 30
+        critical = 40
+    } 
+}
+resource "datadog_dashboard" "ordered_dashboard" {
+  title        = "Ordered Layout Dashboard"
+  description  = "Created using the Datadog provider in Terraform"
+  layout_type  = "ordered"
+  is_read_only = true
+}
+widget {
+    alert_graph_definition {
+      alert_id  = "72404834"
+      viz_type  = "timeseries"
+      title     = "graph"
+      live_span = "1h"
+    }
+  }
